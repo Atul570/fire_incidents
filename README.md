@@ -12,48 +12,30 @@
 
 ## 📊 Pipeline Health Dashboard
 
-**Last Updated:** Waiting for first automated run... | **Status:** 🟢 HEALTHY
+**Last Updated:** Waiting for first run...
 
-### 📈 Real-Time Metrics
+| Metric | Value |
+|--------|-------|
+| 🔥 Total Records | - |
+| ➕ New Today | - |
+| 📅 Data Freshness | - |
+| 🏙️ Neighborhoods | - |
+| ⏱️ Avg Response | - |
+| 📍 Coord Quality | - |
 
-| Metric | Value | Trend |
-|--------|-------|-------|
-| 🔥 Total Fire Incidents | - | - |
-| 📅 Data Freshness | - | - |
-| ⚡ Processing Speed | 90% faster (incremental) | 🚀 Optimized |
-| ✅ Pipeline Success Rate | 99.8% | 🟢 Excellent |
-| 🏙️ Neighborhoods Covered | - | 📍 Complete |
-| ⏱️ Avg Response Time | - minutes | 📊 Analyzed |
+### Layer Status
 
-### 🥉🥈🥇 Layer Performance
+| Layer | Records | Status |
+|-------|---------|--------|
+| 🥉 Bronze | - | ⏳ Waiting |
+| 🥈 Silver | - | ⏳ Waiting |
+| 🥇 Gold | - | ⏳ Waiting |
 
-| Layer | Records | New Today | Status |
-|-------|---------|-----------|--------|
-| 🥉 Bronze | - | - | ⏳ Waiting |
-| 🥈 Silver | - | - | ⏳ Waiting |
-| 🥇 Gold | - neighborhoods | - | ⏳ Waiting |
+### Top 5 Neighborhoods
 
-### 📊 Data Quality Metrics
-
-| Check | Status | Details |
-|-------|--------|---------|
-| 🔍 Duplicate Records | ✅ 0 found | Deduplication working |
-| 📍 Valid Coordinates | ✅ -% | Geocoding accurate |
-| 🏙️ City Mapping | ✅ 100% | City data complete |
-| 📅 Date Integrity | ✅ Valid | No future dates |
-
-### 🚀 Performance Stats
-
-- **Full Load:** ~65 seconds (733K records)
-- **Incremental Load:** ~25 seconds (100-200 records)
-- **Cost Savings:** 90% reduction with incremental processing
-- **Uptime:** 99.8% (last 30 days)
-
-### 🔥 Top 5 Neighborhoods by Incidents
-
-| Rank | Neighborhood | Incidents | Avg Response Time |
-|------|--------------|-----------|-------------------|
-| - | No data available | - | - |
+| Rank | Neighborhood | Incidents | Avg Response |
+|------|--------------|-----------|--------------|
+| - | - | - | - |
 
 ---
 
