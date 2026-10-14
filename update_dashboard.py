@@ -67,15 +67,15 @@ try:
     # Query average response time
     print("⏱️ Querying average response time...")
     avg_response_result = safe_query(cursor,
-        "SELECT AVG(avg_response_time_minutes) FROM fire_incident.gold.response_time_by_neighborhood",
-        (0,))
+    "SELECT AVG(average_response_time) FROM fire_incident.gold.response_time_by_neighborhood",
+    (0,))
     avg_response_time = round(float(avg_response_result[0]), 2) if avg_response_result and avg_response_result[0] else 0
 
     # Query top 5 neighborhoods
     print("🏙️ Querying top neighborhoods...")
     top_neighborhoods = safe_query_all(cursor,
-        "SELECT neighborhood, total_incidents, avg_response_time_minutes FROM fire_incident.gold.response_time_by_neighborhood ORDER BY total_incidents DESC LIMIT 5",
-        [])
+    "SELECT neighborhood_district, total_record, average_response_time FROM fire_incident.gold.response_time_by_neighborhood ORDER BY total_record DESC LIMIT 5",
+    [])
 
     # Query data quality - coordinates
     print("🔍 Checking data quality...")
