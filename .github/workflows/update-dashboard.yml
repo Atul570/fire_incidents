@@ -17,85 +17,20 @@ jobs:
       with:
         python-version: '3.10'
     
-    - name: Install and run
+    - name: Install dependencies
+      run: pip install databricks-sql-connector pytz
+    
+    - name: Run update script
       env:
         DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
         DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-      run: |
-        pip install databricks-sql-connector pytz
-        python -c "
-        import os
-        from databricks import sql
-        from datetime import datetime
-        import pytz
-        
-        conn = sql.connect(
-            server_hostname=os.environ['DATABRICKS_HOST'],
-            http_path=os.environ['DATABRICKS_HTTP_PATH'],
-            access_token=os.environ['DATABRICKS_TOKEN']
-        )
-        c = conn.cursor()
-        
-        c.execute('SELECT COUNT(*), MAX(ingestion_datetime) FROM fire_incident.bronze.fire_incidents')
-        br = c.fetchone()
-        bronze_count = br[0]
-        
-        c.execute('SELECT COUNT(*) FROM fire_incident.bronze.fire_incidents WHERE DATE(ingestion_datetime) = CURRENT_DATE()')
-        new_today = c.fetchone()[0]
-        
-        c.execute('SELECT COUNT(*) FROM fire_incident.silver.fire_incidents')
-        silver_count = c.fetchone()[0]
-        
-        c.execute('SELECT COUNT(*) FROM fire_incident.gold.response_time_by_neighborhood')
-        gold_count = c.fetchone()[0]
-        
-        c.close()
-        conn.close()
-        
-        ist = pytz.timezone('Asia/Kolkata')
-        now = datetime.now(ist).strftime('%b %d, %Y %I:%M %p IST')
-        
-        metrics = f'''## 📊 Pipeline Health Dashboard
-
-        **Last Updated:** {now} | **Status:** 🟢 HEALTHY
-
-        ### 📈 Real-Time Metrics
-
-        | Metric | Value |
-        |--------|-------|
-        | 🔥 Total Fire Incidents | {bronze_count:,} |
-        | ➕ New Records Today | {new_today:,} |
-        | 🏙️ Neighborhoods Analyzed | {gold_count} |
-
-        ### 🥉🥈🥇 Layer Performance
-
-        | Layer | Records | Status |
-        |-------|---------|--------|
-        | 🥉 Bronze | {bronze_count:,} | ✅ Running |
-        | 🥈 Silver | {silver_count:,} | ✅ Running |
-        | 🥇 Gold | {gold_count} neighborhoods | ✅ Running |
-
-        ---
-        '''
-        
-        with open('README.md', 'r') as f:
-            readme = f.read()
-        
-        start = readme.find('## 📊 Pipeline Health Dashboard')
-        end = readme.find('---\n\n## 🏗️ Pipeline Architecture', start)
-        
-        if start != -1 and end != -1:
-            readme = readme[:start] + metrics + '\n' + readme[end:]
-            with open('README.md', 'w') as f:
-                f.write(readme)
-            print(f'✅ Updated! Bronze: {bronze_count:,}, New: {new_today:,}')
-        "
+      run: python update_dashboard.py
     
-    - name: Commit
+    - name: Commit changes
       run: |
         git config user.email "actions@github.com"
         git config user.name "GitHub Actions"
         git add README.md
-        git diff --quiet || git commit -m "📊 Update metrics"
+        git diff --quiet || git commit -m "📊 Update pipeline metrics"
         git push
