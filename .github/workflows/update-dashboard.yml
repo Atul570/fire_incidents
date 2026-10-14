@@ -2,8 +2,8 @@ name: Update Pipeline Dashboard
 
 on:
   schedule:
-    - cron: '30 0 * * *'  # Runs at 12:30 AM IST (after your pipeline at 12:10 AM)
-  workflow_dispatch:  # Manual trigger for testing
+    - cron: '30 0 * * *'
+  workflow_dispatch:
 
 jobs:
   update-metrics:
@@ -22,7 +22,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pip install databricks-sql-connector requests
+        pip install databricks-sql-connector pytz
     
     - name: Query Databricks and Update README
       env:
@@ -30,7 +30,7 @@ jobs:
         DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
         DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       run: |
-        python - <<'EOF'
+        cat > update_metrics.py << 'PYTHON_SCRIPT'
         import os
         from databricks import sql
         from datetime import datetime
@@ -94,22 +94,22 @@ jobs:
         # Create metrics section
         metrics_section = f"""## 📊 Pipeline Health Dashboard
 
-**Last Updated:** {current_time}
+        **Last Updated:** {current_time}
 
-| Metric | Value |
-|--------|-------|
-| 🔥 Total Records | {bronze_count:,} |
-| ➕ New Records Today | {new_today:,} |
-| ✅ Pipeline Status | RUNNING |
-| 📅 Last Data Update | {bronze_last_updated} |
+        | Metric | Value |
+        |--------|-------|
+        | 🔥 Total Records | {bronze_count:,} |
+        | ➕ New Records Today | {new_today:,} |
+        | ✅ Pipeline Status | RUNNING |
+        | 📅 Last Data Update | {bronze_last_updated} |
 
-**Layer Status:**
-- 🥉 **Bronze Layer:** {bronze_count:,} records
-- 🥈 **Silver Layer:** {silver_count:,} records  
-- 🥇 **Gold Layer:** {gold_count:,} aggregated records
+        **Layer Status:**
+        - 🥉 **Bronze Layer:** {bronze_count:,} records
+        - 🥈 **Silver Layer:** {silver_count:,} records  
+        - 🥇 **Gold Layer:** {gold_count:,} aggregated records
 
----
-"""
+        ---
+        """
 
         # Find and replace the metrics section
         start_marker = "## 📊 Pipeline Health Dashboard"
@@ -121,12 +121,10 @@ jobs:
             if end_idx != -1:
                 readme = readme[:start_idx] + metrics_section + "\n" + readme[end_idx:]
             else:
-                # If end marker not found, insert after badges
                 badge_end = readme.find("---", readme.find("!["))
                 if badge_end != -1:
                     readme = readme[:badge_end+4] + "\n\n" + metrics_section + readme[badge_end+4:]
         else:
-            # Insert after badges if section doesn't exist
             badge_end = readme.find("---", readme.find("!["))
             if badge_end != -1:
                 readme = readme[:badge_end+4] + "\n\n" + metrics_section + readme[badge_end+4:]
@@ -138,7 +136,9 @@ jobs:
         print("✅ Dashboard updated successfully!")
         print(f"📊 Bronze: {bronze_count:,} | Silver: {silver_count:,} | Gold: {gold_count:,}")
         print(f"➕ New today: {new_today:,}")
-        EOF
+        PYTHON_SCRIPT
+        
+        python update_metrics.py
     
     - name: Commit and push changes
       run: |
