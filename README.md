@@ -1,6 +1,7 @@
 # 🔥 San Francisco Fire Incidents Data Pipeline
 
 ![Pipeline Status](https://img.shields.io/badge/Pipeline-Production%20Ready-brightgreen?style=for-the-badge)
+![GitHub Actions](https://github.com/Atul570/fire_incidents/actions/workflows/databricks-pipeline.yml/badge.svg)
 ![Data Engineering](https://img.shields.io/badge/Databricks-Delta%20Lake-orange?style=for-the-badge&logo=databricks)
 ![Architecture](https://img.shields.io/badge/Architecture-Medallion-blue?style=for-the-badge)
 ![Records](https://img.shields.io/badge/Records-733K+-purple?style=for-the-badge)
@@ -39,9 +40,23 @@ graph LR
     style C fill:#C0C0C0,stroke:#808080,stroke-width:3px,color:#000
     style D fill:#FFD700,stroke:#DAA520,stroke-width:3px,color:#000
 ```
+---
+
+## 🔄 CI/CD Pipeline
+
+This project uses **GitHub Actions** for continuous integration and deployment:
+
+- ✅ **Automated validation** on every code push
+- ✅ **Pipeline structure checks** ensure all components are present
+- ✅ **Build status badge** shows real-time pipeline health
+- ✅ **Workflow triggers** on push to main branch
+
+**View workflow runs:** [Actions Tab](https://github.com/Atul570/fire_incidents/actions)
+
+
 
 ---
----
+
 
 ## ⚙️ Automated Pipeline Orchestration
 
