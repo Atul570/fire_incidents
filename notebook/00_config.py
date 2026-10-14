@@ -1,0 +1,38 @@
+# Databricks notebook source
+ 
+
+
+API_URL = "https://data.sfgov.org/resource/wr8u-xric.json"
+CATALOG = 'fire_incident'
+BRONZE_SCHEMA = 'bronze'
+
+SILVER_SCHEMA = "silver"
+SILVER_DIM_ACTION_CODE = 'dim_action_codes'
+SILVER_DIM_SITUATION_CODE = 'dim_situation_codes'
+SILVER_DIM_ZIPCODE = 'dim_zipcode_city_mapping'
+
+
+
+GOLD_SCHEMA = "gold"
+TABLE_NAME ="fire_incidents" 
+
+
+
+
+BRONZE_TABLE = f'{CATALOG}.{BRONZE_SCHEMA}.{TABLE_NAME}'
+
+
+SILVER_TABLE = f'{CATALOG}.{SILVER_SCHEMA}.{TABLE_NAME}'
+SILVER_DIM_ACTION_TABLE = f'{CATALOG}.{SILVER_SCHEMA}.{SILVER_DIM_ACTION_CODE}'
+SILVER_DIM_SITUATION_TABLE = f'{CATALOG}.{SILVER_SCHEMA}.{SILVER_DIM_SITUATION_CODE}'
+SILVER_DIM_ZIPCODE_TABLE = f'{CATALOG}.{SILVER_SCHEMA}.{SILVER_DIM_ZIPCODE}'
+
+
+WATERMARK_TABLE = f'{CATALOG}.{SILVER_SCHEMA}.processing_watermark'
+
+FIRST_LOAD_LIMIT = 50000
+INCREMENTAL_LOAD_LIMIT = 1000
+
+# COMMAND ----------
+
+#DATA CLEANING
