@@ -9,6 +9,25 @@
 
 ---
 
+
+## 📊 Pipeline Health Dashboard
+
+**Last Updated:** Oct 14, 2026 10:17 AM IST
+
+| Metric | Value |
+|--------|-------|
+| 🔥 Total Records | 733,061 |
+| ➕ New Records Today | 1 |
+| ✅ Pipeline Status | RUNNING |
+| 📅 Last Data Update | 2026-10-14 03:33:12.926531 |
+
+**Layer Status:**
+- 🥉 **Bronze Layer:** 733,061 records
+- 🥈 **Silver Layer:** 733,061 records  
+- 🥇 **Gold Layer:** 11,334 aggregated records
+
+---
+
 ## 📊 Pipeline Health Dashboard
 
 **Last Updated:** Waiting for first run...
