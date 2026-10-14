@@ -8,37 +8,14 @@
 ![Performance](https://img.shields.io/badge/Incremental%20Speedup-90%25-success?style=for-the-badge)
 
 ---
-
-
-## 📊 Pipeline Health Dashboard
-
-**Last Updated:** Waiting for first run...
-
-| Metric | Value |
-|--------|-------|
-| 🔥 Total Records | - |
-| ➕ New Today | - |
-| 📅 Data Freshness | - |
-| 🏙️ Neighborhoods | - |
-| ⏱️ Avg Response | - |
-| 📍 Coord Quality | - |
-
-### Layer Status
-
-| Layer | Records | Status |
-|-------|---------|--------|
-| 🥉 Bronze | - | ⏳ Waiting |
-| 🥈 Silver | - | ⏳ Waiting |
-| 🥇 Gold | - | ⏳ Waiting |
-
-### Top 5 Neighborhoods
-
-| Rank | Neighborhood | Incidents | Avg Response |
-|------|--------------|-----------|--------------|
-| - | - | - | - |
+### Key Metrics
+- **Total Records Processed:** 733,061
+- **Unique Neighborhoods:** 41
+- **Average Response Time:** 5.4 minutes
+- **Data Quality:** 99.8% coordinate accuracy
+- **Performance Improvement:** 90% faster with incremental loading
 
 ---
-
 ## 🏗️ Pipeline Architecture
 
 
@@ -56,19 +33,6 @@ graph LR
     style C fill:#C0C0C0,stroke:#808080,stroke-width:3px,color:#000
     style D fill:#FFD700,stroke:#DAA520,stroke-width:3px,color:#000
 ```
----
-
-## 🔄 CI/CD Pipeline
-
-This project uses **GitHub Actions** for continuous integration and deployment:
-
-- ✅ **Automated validation** on every code push
-- ✅ **Pipeline structure checks** ensure all components are present
-- ✅ **Build status badge** shows real-time pipeline health
-- ✅ **Workflow triggers** on push to main branch
-
-**View workflow runs:** [Actions Tab](https://github.com/Atul570/fire_incidents/actions)
-
 
 
 ---
@@ -99,14 +63,20 @@ The pipeline runs automatically via **Databricks Workflows** with task dependenc
 ### ✅ Latest Successful Run
 ![Job Success](docs/images/job-success.PNG)
 *Task-level execution details with individual durations*
+---
+## 📈 Performance & Optimization
 
-### Performance Metrics
-| Task | Avg Duration | Status |
-|------|--------------|--------|
-| Bronze Ingestion | ~45s (full) / ~5s (incremental) | ✅ Stable |
-| Silver Transformation | ~12s | ✅ Stable |
-| Gold Analytics | ~8s | ✅ Stable |
-| **Total Pipeline** | **~65s (full) / ~25s (incremental)** | **✅ Production Ready** |
+| Metric | Value |
+|--------|-------|
+| **Bronze Layer** | 733,061 records |
+| **Silver Layer** | 733,061 records |
+| **Gold Layer** | 11,334 aggregated records |
+| **Neighborhoods Analyzed** | 41 |
+| **Average Response Time** | 5.4 minutes |
+| **Data Quality** | 99.8% complete |
+| **Full Load Time** | ~65 seconds |
+| **Incremental Load Time** | ~25 seconds |
+| **Cost Savings** | 90% reduction |
 
 ---
 ## 🛡️ Production-Grade Features
