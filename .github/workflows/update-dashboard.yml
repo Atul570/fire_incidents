@@ -1,0 +1,148 @@
+name: Update Pipeline Dashboard
+
+on:
+  schedule:
+    - cron: '30 0 * * *'  # Runs at 12:30 AM IST (after your pipeline at 12:10 AM)
+  workflow_dispatch:  # Manual trigger for testing
+
+jobs:
+  update-metrics:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        pip install databricks-sql-connector requests
+    
+    - name: Query Databricks and Update README
+      env:
+        DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+        DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      run: |
+        python - <<'EOF'
+        import os
+        from databricks import sql
+        from datetime import datetime
+        import pytz
+
+        # Connect to Databricks
+        connection = sql.connect(
+            server_hostname=os.environ['DATABRICKS_HOST'],
+            http_path=os.environ['DATABRICKS_HTTP_PATH'],
+            access_token=os.environ['DATABRICKS_TOKEN']
+        )
+
+        cursor = connection.cursor()
+
+        # Query Bronze metrics
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_records,
+                MAX(ingestion_datetime) as last_updated
+            FROM fire_incident.bronze.fire_incidents
+        """)
+        bronze_result = cursor.fetchone()
+        bronze_count = bronze_result[0]
+        bronze_last_updated = bronze_result[1]
+
+        # Query Silver metrics
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_records
+            FROM fire_incident.silver.fire_incidents
+        """)
+        silver_count = cursor.fetchone()[0]
+
+        # Query Gold metrics
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_records
+            FROM fire_incident.gold.response_time_by_neighborhood
+        """)
+        gold_count = cursor.fetchone()[0]
+
+        # Query today's new records
+        cursor.execute("""
+            SELECT COUNT(*) as new_records
+            FROM fire_incident.bronze.fire_incidents
+            WHERE DATE(ingestion_datetime) = CURRENT_DATE()
+        """)
+        new_today = cursor.fetchone()[0]
+
+        cursor.close()
+        connection.close()
+
+        # Get current time in IST
+        ist = pytz.timezone('Asia/Kolkata')
+        current_time = datetime.now(ist).strftime('%b %d, %Y %I:%M %p IST')
+
+        # Read current README
+        with open('README.md', 'r') as f:
+            readme = f.read()
+
+        # Create metrics section
+        metrics_section = f"""## 📊 Pipeline Health Dashboard
+
+**Last Updated:** {current_time}
+
+| Metric | Value |
+|--------|-------|
+| 🔥 Total Records | {bronze_count:,} |
+| ➕ New Records Today | {new_today:,} |
+| ✅ Pipeline Status | RUNNING |
+| 📅 Last Data Update | {bronze_last_updated} |
+
+**Layer Status:**
+- 🥉 **Bronze Layer:** {bronze_count:,} records
+- 🥈 **Silver Layer:** {silver_count:,} records  
+- 🥇 **Gold Layer:** {gold_count:,} aggregated records
+
+---
+"""
+
+        # Find and replace the metrics section
+        start_marker = "## 📊 Pipeline Health Dashboard"
+        end_marker = "---\n\n## 🏗️ Pipeline Architecture"
+        
+        if start_marker in readme:
+            start_idx = readme.find(start_marker)
+            end_idx = readme.find(end_marker, start_idx)
+            if end_idx != -1:
+                readme = readme[:start_idx] + metrics_section + "\n" + readme[end_idx:]
+            else:
+                # If end marker not found, insert after badges
+                badge_end = readme.find("---", readme.find("!["))
+                if badge_end != -1:
+                    readme = readme[:badge_end+4] + "\n\n" + metrics_section + readme[badge_end+4:]
+        else:
+            # Insert after badges if section doesn't exist
+            badge_end = readme.find("---", readme.find("!["))
+            if badge_end != -1:
+                readme = readme[:badge_end+4] + "\n\n" + metrics_section + readme[badge_end+4:]
+
+        # Write updated README
+        with open('README.md', 'w') as f:
+            f.write(readme)
+
+        print("✅ Dashboard updated successfully!")
+        print(f"📊 Bronze: {bronze_count:,} | Silver: {silver_count:,} | Gold: {gold_count:,}")
+        print(f"➕ New today: {new_today:,}")
+        EOF
+    
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add README.md
+        git diff --quiet && git diff --staged --quiet || (git commit -m "📊 Auto-update pipeline metrics [skip ci]" && git push)
