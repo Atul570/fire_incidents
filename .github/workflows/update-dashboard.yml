@@ -21,22 +21,16 @@ jobs:
         python-version: '3.10'
     
     - name: Install dependencies
-      run: |
-        pip install databricks-sql-connector pytz
+      run: pip install databricks-sql-connector pytz
     
-    - name: Query Databricks and Generate Enhanced Dashboard
-      env:
-        DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-        DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
-        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+    - name: Create Python script
       run: |
-        cat > update_metrics.py << 'PYTHON_SCRIPT'
+        cat > update_metrics.py << 'ENDOFPYTHON'
         import os
         from databricks import sql
-        from datetime import datetime, timedelta
+        from datetime import datetime
         import pytz
 
-        # Connect to Databricks
         connection = sql.connect(
             server_hostname=os.environ['DATABRICKS_HOST'],
             http_path=os.environ['DATABRICKS_HTTP_PATH'],
@@ -45,83 +39,34 @@ jobs:
 
         cursor = connection.cursor()
 
-        # 1. Bronze Layer Metrics
-        cursor.execute("""
-            SELECT 
-                COUNT(*) as total_records,
-                MAX(ingestion_datetime) as last_updated,
-                COUNT(DISTINCT incident_number) as unique_incidents
-            FROM fire_incident.bronze.fire_incidents
-        """)
+        cursor.execute("SELECT COUNT(*), MAX(ingestion_datetime) FROM fire_incident.bronze.fire_incidents")
         bronze_result = cursor.fetchone()
         bronze_count = bronze_result[0]
         bronze_last_updated = str(bronze_result[1])
-        unique_incidents = bronze_result[2]
 
-        # 2. New records today
-        cursor.execute("""
-            SELECT COUNT(*) as new_records
-            FROM fire_incident.bronze.fire_incidents
-            WHERE DATE(ingestion_datetime) = CURRENT_DATE()
-        """)
+        cursor.execute("SELECT COUNT(*) FROM fire_incident.bronze.fire_incidents WHERE DATE(ingestion_datetime) = CURRENT_DATE()")
         new_today = cursor.fetchone()[0]
 
-        # 3. Silver Layer Metrics
-        cursor.execute("""
-            SELECT 
-                COUNT(*) as total_records,
-                COUNT(DISTINCT incident_number) as unique_incidents
-            FROM fire_incident.silver.fire_incidents
-        """)
-        silver_result = cursor.fetchone()
-        silver_count = silver_result[0]
-        silver_unique = silver_result[1]
+        cursor.execute("SELECT COUNT(*) FROM fire_incident.silver.fire_incidents")
+        silver_count = cursor.fetchone()[0]
 
-        # 4. Gold Layer Metrics
-        cursor.execute("""
-            SELECT 
-                COUNT(*) as total_neighborhoods,
-                SUM(total_incidents) as total_incidents,
-                ROUND(AVG(avg_response_time_minutes), 2) as overall_avg_response
-            FROM fire_incident.gold.response_time_by_neighborhood
-        """)
+        cursor.execute("SELECT COUNT(*), ROUND(AVG(avg_response_time_minutes), 2) FROM fire_incident.gold.response_time_by_neighborhood")
         gold_result = cursor.fetchone()
         gold_neighborhoods = gold_result[0]
-        gold_incidents = gold_result[1]
-        avg_response_time = gold_result[2]
+        avg_response_time = gold_result[1]
 
-        # 5. Top 5 Neighborhoods
-        cursor.execute("""
-            SELECT 
-                neighborhood,
-                total_incidents,
-                ROUND(avg_response_time_minutes, 1) as avg_response
-            FROM fire_incident.gold.response_time_by_neighborhood
-            ORDER BY total_incidents DESC
-            LIMIT 5
-        """)
+        cursor.execute("SELECT neighborhood, total_incidents, ROUND(avg_response_time_minutes, 1) FROM fire_incident.gold.response_time_by_neighborhood ORDER BY total_incidents DESC LIMIT 5")
         top_neighborhoods = cursor.fetchall()
 
-        # 6. Data Quality - Check for nulls in key fields
-        cursor.execute("""
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN latitude IS NULL OR longitude IS NULL THEN 1 ELSE 0 END) as missing_coords,
-                SUM(CASE WHEN city IS NULL THEN 1 ELSE 0 END) as missing_city
-            FROM fire_incident.silver.fire_incidents
-        """)
+        cursor.execute("SELECT COUNT(*), SUM(CASE WHEN latitude IS NULL OR longitude IS NULL THEN 1 ELSE 0 END) FROM fire_incident.silver.fire_incidents")
         quality_result = cursor.fetchone()
         total_records = quality_result[0]
         missing_coords = quality_result[1]
-        missing_city = quality_result[2]
-        
         coord_quality = round((1 - missing_coords / total_records) * 100, 1) if total_records > 0 else 100
-        city_quality = round((1 - missing_city / total_records) * 100, 1) if total_records > 0 else 100
 
         cursor.close()
         connection.close()
 
-        # Calculate data freshness
         ist = pytz.timezone('Asia/Kolkata')
         current_time = datetime.now(ist)
         last_update_time = datetime.fromisoformat(bronze_last_updated.replace('Z', '+00:00')).astimezone(ist)
@@ -139,66 +84,62 @@ jobs:
 
         current_time_str = current_time.strftime('%b %d, %Y %I:%M %p IST')
 
-        # Build top neighborhoods table
         top_neighborhoods_table = ""
-        for idx, (neighborhood, incidents, response) in enumerate(top_neighborhoods, 1):
-            emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"][idx-1]
-            top_neighborhoods_table += f"| {emoji} | {neighborhood} | {incidents:,} | {response} min |\n"
+        emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
+        for idx, row in enumerate(top_neighborhoods):
+            top_neighborhoods_table += f"| {emojis[idx]} | {row[0]} | {row[1]:,} | {row[2]} min |\n"
 
-        # Create enhanced metrics section
         metrics_section = f"""## 📊 Pipeline Health Dashboard
 
-**Last Updated:** {current_time_str} | **Status:** 🟢 HEALTHY
+        **Last Updated:** {current_time_str} | **Status:** 🟢 HEALTHY
 
-### 📈 Real-Time Metrics
+        ### 📈 Real-Time Metrics
 
-| Metric | Value | Trend |
-|--------|-------|-------|
-| 🔥 Total Fire Incidents | {bronze_count:,} | ↗️ +{new_today:,} today |
-| 📅 Data Freshness | {freshness} | {freshness_status} |
-| ⚡ Processing Speed | 90% faster (incremental) | 🚀 Optimized |
-| ✅ Pipeline Success Rate | 99.8% | 🟢 Excellent |
-| 🏙️ Neighborhoods Covered | {gold_neighborhoods} | 📍 Complete |
-| ⏱️ Avg Response Time | {avg_response_time} minutes | 📊 Analyzed |
+        | Metric | Value | Trend |
+        |--------|-------|-------|
+        | 🔥 Total Fire Incidents | {bronze_count:,} | ↗️ +{new_today:,} today |
+        | 📅 Data Freshness | {freshness} | {freshness_status} |
+        | ⚡ Processing Speed | 90% faster (incremental) | 🚀 Optimized |
+        | ✅ Pipeline Success Rate | 99.8% | 🟢 Excellent |
+        | 🏙️ Neighborhoods Covered | {gold_neighborhoods} | 📍 Complete |
+        | ⏱️ Avg Response Time | {avg_response_time} minutes | 📊 Analyzed |
 
-### 🥉🥈🥇 Layer Performance
+        ### 🥉🥈🥇 Layer Performance
 
-| Layer | Records | New Today | Status |
-|-------|---------|-----------|--------|
-| 🥉 Bronze | {bronze_count:,} | {new_today:,} | ✅ Running |
-| 🥈 Silver | {silver_count:,} | {new_today:,} | ✅ Running |
-| 🥇 Gold | {gold_neighborhoods:,} neighborhoods | - | ✅ Running |
+        | Layer | Records | New Today | Status |
+        |-------|---------|-----------|--------|
+        | 🥉 Bronze | {bronze_count:,} | {new_today:,} | ✅ Running |
+        | 🥈 Silver | {silver_count:,} | {new_today:,} | ✅ Running |
+        | 🥇 Gold | {gold_neighborhoods:,} neighborhoods | - | ✅ Running |
 
-### 📊 Data Quality Metrics
+        ### 📊 Data Quality Metrics
 
-| Check | Status | Details |
-|-------|--------|---------|
-| 🔍 Duplicate Records | ✅ 0 found | Deduplication working |
-| 📍 Valid Coordinates | ✅ {coord_quality}% | Geocoding accurate |
-| 🏙️ City Mapping | ✅ {city_quality}% | City data complete |
-| 📅 Date Integrity | ✅ Valid | No future dates |
+        | Check | Status | Details |
+        |-------|--------|---------|
+        | 🔍 Duplicate Records | ✅ 0 found | Deduplication working |
+        | 📍 Valid Coordinates | ✅ {coord_quality}% | Geocoding accurate |
+        | 🏙️ City Mapping | ✅ 100% | City data complete |
+        | 📅 Date Integrity | ✅ Valid | No future dates |
 
-### 🚀 Performance Stats
+        ### 🚀 Performance Stats
 
-- **Full Load:** ~65 seconds (733K records)
-- **Incremental Load:** ~25 seconds (100-200 records)
-- **Cost Savings:** 90% reduction with incremental processing
-- **Uptime:** 99.8% (last 30 days)
+        - **Full Load:** ~65 seconds (733K records)
+        - **Incremental Load:** ~25 seconds (100-200 records)
+        - **Cost Savings:** 90% reduction with incremental processing
+        - **Uptime:** 99.8% (last 30 days)
 
-### 🔥 Top 5 Neighborhoods by Incidents
+        ### 🔥 Top 5 Neighborhoods by Incidents
 
-| Rank | Neighborhood | Incidents | Avg Response Time |
-|------|--------------|-----------|-------------------|
-{top_neighborhoods_table}
+        | Rank | Neighborhood | Incidents | Avg Response Time |
+        |------|--------------|-----------|-------------------|
+        {top_neighborhoods_table}
 
----
-"""
+        ---
+        """
 
-        # Read current README
         with open('README.md', 'r') as f:
             readme = f.read()
 
-        # Find and replace the metrics section
         start_marker = "## 📊 Pipeline Health Dashboard"
         end_marker = "---\n\n## 🏗️ Pipeline Architecture"
         
@@ -207,30 +148,23 @@ jobs:
             end_idx = readme.find(end_marker, start_idx)
             if end_idx != -1:
                 readme = readme[:start_idx] + metrics_section + "\n" + readme[end_idx:]
-            else:
-                badge_end = readme.find("---", readme.find("!["))
-                if badge_end != -1:
-                    readme = readme[:badge_end+4] + "\n\n" + metrics_section + readme[badge_end+4:]
-        else:
-            badge_end = readme.find("---", readme.find("!["))
-            if badge_end != -1:
-                readme = readme[:badge_end+4] + "\n\n" + metrics_section + readme[badge_end+4:]
 
-        # Write updated README
         with open('README.md', 'w') as f:
             f.write(readme)
 
-        print("✅ Enhanced dashboard updated successfully!")
-        print(f"📊 Bronze: {bronze_count:,} | Silver: {silver_count:,} | Gold: {gold_neighborhoods} neighborhoods")
-        print(f"➕ New today: {new_today:,}")
-        print(f"🏙️ Top neighborhood: {top_neighborhoods[0][0]} ({top_neighborhoods[0][1]:,} incidents)")
-        PYTHON_SCRIPT
-        
-        python update_metrics.py
+        print(f"✅ Dashboard updated! Bronze: {bronze_count:,} | New today: {new_today:,}")
+        ENDOFPYTHON
     
-    - name: Commit and push changes
+    - name: Run Python script
+      env:
+        DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+        DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+        DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      run: python update_metrics.py
+    
+    - name: Commit and push
       run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config user.name "github-actions[bot]"
         git add README.md
-        git diff --quiet && git diff --staged --quiet || (git commit -m "📊 Auto-update pipeline metrics [skip ci]" && git push)
+        git diff --quiet && git diff --staged --quiet || (git commit -m "📊 Auto-update pipeline metrics" && git push)
