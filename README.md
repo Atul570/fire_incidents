@@ -11,6 +11,23 @@
 
 ## 📊 Pipeline Health Dashboard
 
+**Last Updated:** Waiting for first run...
+
+| Metric | Value |
+|--------|-------|
+| 🔥 Total Records | - |
+| ➕ New Records Today | - |
+| ✅ Pipeline Status | RUNNING |
+| 📅 Last Data Update | - |
+
+**Layer Status:**
+- 🥉 **Bronze Layer:** - records
+- 🥈 **Silver Layer:** - records  
+- 🥇 **Gold Layer:** - aggregated records
+
+---
+## 📊 Pipeline Health Dashboard
+
 | Layer | Status | Records Processed | Avg Duration | Last Updated |
 |-------|--------|-------------------|--------------|--------------|
 | 🥉 **Bronze** | ✅ Running | 733,000+ | 45s (full) / 5s (incremental) | Oct 13, 2026 |
